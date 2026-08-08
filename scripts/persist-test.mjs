@@ -3,12 +3,27 @@
 //   2. （kojo 側が page.reload() する）
 //   3. verify(page) — リロード後の復元状態を検証する。不一致なら throw すること
 // page は Playwright の Page。セレクタはこのアプリの実装に合わせて書き換える。
-// このファイルはレベル制約で指示された場合のみ書き換える（L0 では実行されない）
 
 export async function scenario(page) {
-  throw new Error("builder が scenario をこのアプリ固有の操作に書き換えてください");
+  await page.fill("#title-input", "永続化テストの本");
+  await page.click('#add-form button[type="submit"]');
+  await page.click(".book-item .toggle-done");
 }
 
 export async function verify(page) {
-  throw new Error("builder が verify をこのアプリ固有の検証に書き換えてください");
+  const items = page.locator(".book-item");
+  const count = await items.count();
+  if (count !== 1) {
+    throw new Error(`expected 1 book after reload, got ${count}`);
+  }
+
+  const title = await items.first().locator(".book-title").textContent();
+  if (title !== "永続化テストの本") {
+    throw new Error(`expected title "永続化テストの本", got ${JSON.stringify(title)}`);
+  }
+
+  const className = (await items.first().getAttribute("class")) || "";
+  if (!/\bdone\b/.test(className)) {
+    throw new Error("expected book to be done after reload");
+  }
 }

@@ -1,5 +1,348 @@
 <!doctype html>
 <html lang="ja">
-<head><meta charset="utf-8"><title>読書リスト</title></head>
-<body><h1>読書リスト</h1><p>builder がこのファイルを実装で置き換えます。</p></body>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>読書リスト</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%232d6a5a'/%3E%3Cpath d='M7 8h7.5c1.2 0 2.2.5 2.5 1.2V24c-.5-.4-1.4-.7-2.5-.7H7V8zm18 0h-7.5c-1.2 0-2.2.5-2.5 1.2V24c.5-.4 1.4-.7 2.5-.7H25V8z' fill='%23eef4f1'/%3E%3Cpath d='M16 9.2v14.1' stroke='%23a8c5bb' stroke-width='1.2'/%3E%3C/svg%3E">
+  <style>
+    :root {
+      --ink: #1a2a32;
+      --ink-muted: #5a6f7a;
+      --paper: #eef2f5;
+      --paper-deep: #d8e2e9;
+      --accent: #2d6a5a;
+      --accent-hover: #245648;
+      --line: #b8c8d2;
+      --done-fg: #7a8f9a;
+      --surface: rgba(255, 255, 255, 0.72);
+      --radius: 10px;
+      --font-display: "Iowan Old Style", "Palatino Linotype", Palatino, "Hiragino Mincho ProN", "Yu Mincho", "Noto Serif JP", Georgia, serif;
+      --font-ui: "Avenir Next", "Segoe UI", "Hiragino Sans", "Yu Gothic UI", "Noto Sans JP", sans-serif;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      color: var(--ink);
+      font-family: var(--font-ui);
+      background:
+        radial-gradient(ellipse 80% 50% at 20% 0%, #c5d8d0 0%, transparent 55%),
+        radial-gradient(ellipse 70% 45% at 90% 10%, #b9c9d6 0%, transparent 50%),
+        linear-gradient(165deg, var(--paper) 0%, var(--paper-deep) 100%);
+      line-height: 1.5;
+    }
+
+    .app {
+      width: min(36rem, calc(100% - 2rem));
+      margin: 2.5rem 0 1.5rem;
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+    }
+
+    h1 {
+      margin: 0 0 0.35rem;
+      font-family: var(--font-display);
+      font-weight: 600;
+      font-size: clamp(1.85rem, 5vw, 2.35rem);
+      letter-spacing: 0.04em;
+    }
+
+    .lede {
+      margin: 0 0 1.75rem;
+      color: var(--ink-muted);
+      font-size: 0.95rem;
+    }
+
+    #add-form {
+      display: flex;
+      gap: 0.6rem;
+      margin-bottom: 1.5rem;
+    }
+
+    #title-input {
+      flex: 1;
+      min-width: 0;
+      padding: 0.7rem 0.9rem;
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      background: var(--surface);
+      color: var(--ink);
+      font: inherit;
+      font-size: 1rem;
+      backdrop-filter: blur(6px);
+      transition: border-color 0.2s ease, box-shadow 0.2s ease;
+    }
+
+    #title-input:focus {
+      outline: none;
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px rgba(45, 106, 90, 0.18);
+    }
+
+    #add-form button[type="submit"] {
+      padding: 0.7rem 1.15rem;
+      border: none;
+      border-radius: var(--radius);
+      background: var(--accent);
+      color: #f4faf7;
+      font: inherit;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.2s ease, transform 0.15s ease;
+    }
+
+    #add-form button[type="submit"]:hover {
+      background: var(--accent-hover);
+    }
+
+    #add-form button[type="submit"]:active {
+      transform: scale(0.97);
+    }
+
+    #empty-message {
+      margin: 0.5rem 0 0;
+      padding: 1.75rem 1rem;
+      text-align: center;
+      color: var(--ink-muted);
+      background: var(--surface);
+      border: 1px dashed var(--line);
+      border-radius: var(--radius);
+    }
+
+    #empty-message[hidden],
+    #book-list[hidden] {
+      display: none;
+    }
+
+    #book-list {
+      list-style: none;
+      margin: 0;
+      padding: 0;
+      display: flex;
+      flex-direction: column;
+      gap: 0.55rem;
+    }
+
+    .book-item {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 0.75rem;
+      padding: 0.85rem 1rem;
+      background: var(--surface);
+      border: 1px solid transparent;
+      border-radius: var(--radius);
+      backdrop-filter: blur(6px);
+      animation: rise-in 0.28s ease both;
+    }
+
+    @keyframes rise-in {
+      from { opacity: 0; transform: translateY(6px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .book-title {
+      flex: 1;
+      min-width: 0;
+      font-family: var(--font-display);
+      font-size: 1.05rem;
+      word-break: break-word;
+    }
+
+    .book-item.done .book-title {
+      text-decoration: line-through;
+      color: var(--done-fg);
+    }
+
+    .book-item.done {
+      background: rgba(255, 255, 255, 0.4);
+    }
+
+    .toggle-done {
+      flex-shrink: 0;
+      padding: 0.4rem 0.75rem;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: transparent;
+      color: var(--ink);
+      font: inherit;
+      font-size: 0.85rem;
+      cursor: pointer;
+      transition: background 0.2s ease, border-color 0.2s ease, color 0.2s ease;
+    }
+
+    .toggle-done:hover {
+      border-color: var(--accent);
+      color: var(--accent);
+      background: rgba(45, 106, 90, 0.08);
+    }
+
+    .book-item.done .toggle-done {
+      color: var(--ink-muted);
+    }
+
+    footer {
+      margin-top: 3rem;
+      text-align: center;
+      font-size: .8rem;
+      opacity: .6;
+      padding-bottom: 1.5rem;
+    }
+
+    footer a {
+      color: inherit;
+    }
+  </style>
+</head>
+<body>
+  <main class="app">
+    <h1>読書リスト</h1>
+    <p class="lede">読みたい本をメモして、読了したら切り替えよう。</p>
+
+    <form id="add-form" autocomplete="off">
+      <input
+        id="title-input"
+        type="text"
+        name="title"
+        placeholder="本のタイトル"
+        aria-label="本のタイトル"
+      >
+      <button type="submit">追加</button>
+    </form>
+
+    <p id="empty-message">まだ本がありません</p>
+    <ul id="book-list" hidden></ul>
+  </main>
+
+  <footer style="margin-top:3rem;text-align:center;font-size:.8rem;opacity:.6">
+    <a href="https://apps.jozo.beer" style="color:inherit">apps.jozo.beer</a>
+  </footer>
+
+  <script>
+    const STORAGE_KEY = "reading-list-books";
+
+    /** @typedef {{ id: string, title: string, done: boolean }} Book */
+
+    /** @type {Book[]} */
+    let books = loadBooks();
+
+    const form = document.getElementById("add-form");
+    const titleInput = document.getElementById("title-input");
+    const bookList = document.getElementById("book-list");
+    const emptyMessage = document.getElementById("empty-message");
+
+    /**
+     * @returns {Book[]}
+     */
+    function loadBooks() {
+      try {
+        const raw = localStorage.getItem(STORAGE_KEY);
+        if (raw == null) return [];
+        const parsed = JSON.parse(raw);
+        if (!Array.isArray(parsed)) return [];
+        return parsed
+          .filter(
+            (item) =>
+              item &&
+              typeof item === "object" &&
+              typeof item.id === "string" &&
+              typeof item.title === "string" &&
+              typeof item.done === "boolean"
+          )
+          .map((item) => ({
+            id: item.id,
+            title: item.title,
+            done: item.done,
+          }));
+      } catch {
+        return [];
+      }
+    }
+
+    /**
+     * @param {Book[]} next
+     */
+    function saveBooks(next) {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
+    }
+
+    /**
+     * @param {string} title
+     */
+    function addBook(title) {
+      const trimmed = title.trim();
+      if (!trimmed) return;
+
+      books = [
+        ...books,
+        {
+          id: crypto.randomUUID(),
+          title: trimmed,
+          done: false,
+        },
+      ];
+      saveBooks(books);
+      render();
+    }
+
+    /**
+     * @param {string} id
+     */
+    function toggleDone(id) {
+      books = books.map((book) =>
+        book.id === id ? { ...book, done: !book.done } : book
+      );
+      saveBooks(books);
+      render();
+    }
+
+    function render() {
+      bookList.replaceChildren();
+
+      if (books.length === 0) {
+        emptyMessage.hidden = false;
+        bookList.hidden = true;
+        return;
+      }
+
+      emptyMessage.hidden = true;
+      bookList.hidden = false;
+
+      for (const book of books) {
+        const li = document.createElement("li");
+        li.className = "book-item" + (book.done ? " done" : "");
+        li.dataset.id = book.id;
+
+        const title = document.createElement("span");
+        title.className = "book-title";
+        title.textContent = book.title;
+
+        const button = document.createElement("button");
+        button.type = "button";
+        button.className = "toggle-done";
+        button.textContent = book.done ? "未読に戻す" : "読了";
+        button.addEventListener("click", () => toggleDone(book.id));
+
+        li.append(title, button);
+        bookList.append(li);
+      }
+    }
+
+    form.addEventListener("submit", (event) => {
+      event.preventDefault();
+      addBook(titleInput.value);
+      titleInput.value = "";
+      titleInput.focus();
+    });
+
+    render();
+  </script>
+</body>
 </html>
