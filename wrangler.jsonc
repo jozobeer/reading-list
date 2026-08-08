@@ -1,0 +1,6 @@
+{
+  "name": "reading-list",
+  "compatibility_date": "2026-07-01",
+  "assets": { "directory": "./public" },
+  "routes": [{ "pattern": "reading-list.jozo.beer", "custom_domain": true }]
+}
