@@ -73,3 +73,49 @@ test("リロード後も本の一覧とステータスが復元される", async
   await expect(items.nth(1).locator(".book-title")).toHaveText("騎士団長殺し");
   await expect(items.nth(1)).not.toHaveClass(/done/);
 });
+
+test("meta description があり content が空でない", async ({ page }) => {
+  await page.goto(APP_URL);
+  const content = await page.evaluate(
+    () => document.querySelector('meta[name="description"]')?.getAttribute("content") ?? ""
+  );
+  expect(content.trim()).toBeTruthy();
+});
+
+test("JSON-LD に WebApplication の必須フィールドがある", async ({ page }) => {
+  await page.goto(APP_URL);
+  const raw = await page.evaluate(
+    () => document.querySelector('script[type="application/ld+json"]')?.textContent ?? ""
+  );
+  expect(raw.trim()).toBeTruthy();
+
+  const parsed = JSON.parse(raw);
+  const nodes = collectJsonLdNodes(parsed);
+  const app = nodes.find((node) => {
+    const type = node["@type"];
+    return type === "WebApplication" || (Array.isArray(type) && type.includes("WebApplication"));
+  });
+
+  expect(app).toBeTruthy();
+  expect(String(app!.name ?? "").trim()).toBeTruthy();
+  expect(String(app!.description ?? "").trim()).toBeTruthy();
+  expect(String(app!.url ?? "").trim()).toBeTruthy();
+  expect(String(app!.applicationCategory ?? "").trim()).toBeTruthy();
+  expect(app!.offers?.price).toBe("0");
+});
+
+test("使い方と FAQ のセクションがページ上にある", async ({ page }) => {
+  await page.goto(APP_URL);
+  await expect(page.getByRole("heading", { name: "使い方" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "FAQ" })).toBeVisible();
+});
+
+function collectJsonLdNodes(parsed: unknown): Array<Record<string, any>> {
+  if (Array.isArray(parsed)) {
+    return parsed.flatMap(collectJsonLdNodes);
+  }
+  if (!parsed || typeof parsed !== "object") return [];
+  const node = parsed as Record<string, any>;
+  const graph = Array.isArray(node["@graph"]) ? node["@graph"].flatMap(collectJsonLdNodes) : [];
+  return [node, ...graph];
+}

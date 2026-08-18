@@ -4,6 +4,22 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>読書リスト</title>
+  <meta name="description" content="読みたい本のタイトルを登録し、「読了」と「未読に戻す」でステータスを切り替えます。一覧はブラウザに保存され、リロード後も復元されます。">
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "WebApplication",
+    "name": "読書リスト",
+    "description": "読みたい本のタイトルを登録し、「読了」と「未読に戻す」でステータスを切り替えます。一覧はブラウザに保存され、リロード後も復元されます。",
+    "url": "https://reading-list.jozo.beer/",
+    "applicationCategory": "LifestyleApplication",
+    "offers": {
+      "@type": "Offer",
+      "price": "0",
+      "priceCurrency": "JPY"
+    }
+  }
+  </script>
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%232d6a5a'/%3E%3Cpath d='M7 8h7.5c1.2 0 2.2.5 2.5 1.2V24c-.5-.4-1.4-.7-2.5-.7H7V8zm18 0h-7.5c-1.2 0-2.2.5-2.5 1.2V24c.5-.4 1.4-.7 2.5-.7H25V8z' fill='%23eef4f1'/%3E%3Cpath d='M16 9.2v14.1' stroke='%23a8c5bb' stroke-width='1.2'/%3E%3C/svg%3E">
   <style>
     :root {
@@ -199,6 +215,52 @@
     footer a {
       color: inherit;
     }
+
+    .help {
+      margin-top: 2.5rem;
+      color: var(--ink-muted);
+      font-size: 0.9rem;
+    }
+
+    .help + .help {
+      margin-top: 1.75rem;
+    }
+
+    .help h2 {
+      margin: 0 0 0.65rem;
+      font-family: var(--font-display);
+      font-size: 1.1rem;
+      font-weight: 600;
+      color: var(--ink);
+      letter-spacing: 0.03em;
+    }
+
+    .help ol {
+      margin: 0;
+      padding-left: 1.25rem;
+    }
+
+    .help li + li {
+      margin-top: 0.4rem;
+    }
+
+    .help dl {
+      margin: 0;
+    }
+
+    .help dt {
+      margin-top: 0.7rem;
+      font-weight: 600;
+      color: var(--ink);
+    }
+
+    .help dt:first-child {
+      margin-top: 0;
+    }
+
+    .help dd {
+      margin: 0.2rem 0 0;
+    }
   </style>
 </head>
 <body>
@@ -219,6 +281,27 @@
 
     <p id="empty-message">まだ本がありません</p>
     <ul id="book-list" hidden></ul>
+
+    <section id="how-to" class="help">
+      <h2>使い方</h2>
+      <ol>
+        <li>読みたい本のタイトルを入力し、「追加」を押します（Enter でも追加できます）。</li>
+        <li>読み終わったら「読了」を押します。打ち消し線と淡色で区別されます。</li>
+        <li>間違えたときは「未読に戻す」で戻せます。一覧はブラウザに保存され、リロードしても残ります。</li>
+      </ol>
+    </section>
+
+    <section id="faq" class="help">
+      <h2>FAQ</h2>
+      <dl>
+        <dt>データはどこに保存されますか？</dt>
+        <dd>このブラウザ内に保存されます。サーバーには送信されません。</dd>
+        <dt>空のタイトルは追加できますか？</dt>
+        <dd>できません。空白だけの入力も追加されません。</dd>
+        <dt>リロードすると消えますか？</dt>
+        <dd>消えません。同じブラウザなら一覧と読了状態が復元されます。</dd>
+      </dl>
+    </section>
   </main>
 
   <footer style="margin-top:3rem;text-align:center;font-size:.8rem;opacity:.6">
