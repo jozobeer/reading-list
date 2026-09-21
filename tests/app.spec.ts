@@ -110,6 +110,105 @@ test("使い方と FAQ のセクションがページ上にある", async ({ pag
   await expect(page.getByRole("heading", { name: "FAQ" })).toBeVisible();
 });
 
+test("1冊目を削除すると一覧とリロード後から消える", async ({ page }) => {
+  await page.goto(APP_URL);
+  await page.fill("#title-input", "一冊目");
+  await page.click('#add-form button[type="submit"]');
+  await page.fill("#title-input", "二冊目");
+  await page.click('#add-form button[type="submit"]');
+
+  await page.locator(".book-item").nth(0).locator(".delete-book").click();
+
+  await expect(page.locator(".book-item")).toHaveCount(1);
+  await expect(page.locator(".book-title")).toHaveText("二冊目");
+
+  await page.reload();
+
+  await expect(page.locator(".book-item")).toHaveCount(1);
+  await expect(page.locator(".book-title")).toHaveText("二冊目");
+  await expect(page.locator("body")).not.toContainText("一冊目");
+});
+
+test("最後の1冊を削除すると空メッセージが出る", async ({ page }) => {
+  await page.goto(APP_URL);
+  await page.fill("#title-input", "一冊目");
+  await page.click('#add-form button[type="submit"]');
+
+  await page.locator(".delete-book").click();
+
+  await expect(page.locator(".book-item")).toHaveCount(0);
+  await expect(page.locator("#empty-message")).toBeVisible();
+});
+
+test("読了本の削除を取り消すと位置と読了が残りリロード後も残る", async ({ page }) => {
+  await page.goto(APP_URL);
+  await page.fill("#title-input", "一冊目");
+  await page.click('#add-form button[type="submit"]');
+  await page.fill("#title-input", "二冊目");
+  await page.click('#add-form button[type="submit"]');
+  await page.locator(".book-item").nth(0).locator(".toggle-done").click();
+
+  await page.locator(".book-item").nth(0).locator(".delete-book").click();
+  await expect(page.locator("#undo-delete")).toBeVisible();
+  await expect(page.locator("#undo-delete")).toHaveText("元に戻す");
+
+  await page.locator("#undo-delete").click();
+
+  const items = page.locator(".book-item");
+  await expect(items).toHaveCount(2);
+  await expect(items.nth(0).locator(".book-title")).toHaveText("一冊目");
+  await expect(items.nth(0)).toHaveClass(/done/);
+  await expect(items.nth(0).locator(".toggle-done")).toHaveText("未読に戻す");
+  await expect(items.nth(0).locator(".book-title")).toHaveCSS(
+    "text-decoration-line",
+    "line-through"
+  );
+
+  await page.reload();
+
+  const restored = page.locator(".book-item");
+  await expect(restored).toHaveCount(2);
+  await expect(restored.nth(0).locator(".book-title")).toHaveText("一冊目");
+  await expect(restored.nth(0)).toHaveClass(/done/);
+  await expect(restored.nth(0).locator(".toggle-done")).toHaveText("未読に戻す");
+  await expect(restored.nth(0).locator(".book-title")).toHaveCSS(
+    "text-decoration-line",
+    "line-through"
+  );
+});
+
+test("削除前とリロード後は元に戻すを出さない", async ({ page }) => {
+  await page.goto(APP_URL);
+  await expect(page.locator("#undo-delete")).toBeHidden();
+
+  await page.fill("#title-input", "一冊目");
+  await page.click('#add-form button[type="submit"]');
+  await expect(page.locator("#undo-delete")).toBeHidden();
+
+  await page.locator(".delete-book").click();
+  await expect(page.locator("#undo-delete")).toBeVisible();
+
+  await page.reload();
+  await expect(page.locator("#undo-delete")).toBeHidden();
+});
+
+test("旧形式の localStorage データでもタイトルと読了状態を表示する", async ({ page }) => {
+  await page.goto(APP_URL);
+  await page.evaluate(() => {
+    localStorage.setItem(
+      "reading-list-books",
+      JSON.stringify([{ id: "old-1", title: "旧データの本", done: true }])
+    );
+  });
+  await page.reload();
+
+  const item = page.locator(".book-item");
+  await expect(item).toHaveCount(1);
+  await expect(item.locator(".book-title")).toHaveText("旧データの本");
+  await expect(item).toHaveClass(/done/);
+  await expect(item.locator(".toggle-done")).toHaveText("未読に戻す");
+});
+
 function collectJsonLdNodes(parsed: unknown): Array<Record<string, any>> {
   if (Array.isArray(parsed)) {
     return parsed.flatMap(collectJsonLdNodes);

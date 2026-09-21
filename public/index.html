@@ -133,7 +133,8 @@
     }
 
     #empty-message[hidden],
-    #book-list[hidden] {
+    #book-list[hidden],
+    #undo-delete[hidden] {
       display: none;
     }
 
@@ -181,8 +182,14 @@
       background: rgba(255, 255, 255, 0.4);
     }
 
-    .toggle-done {
+    .book-actions {
+      display: flex;
       flex-shrink: 0;
+      gap: 0.4rem;
+    }
+
+    .toggle-done,
+    .delete-book {
       padding: 0.4rem 0.75rem;
       border: 1px solid var(--line);
       border-radius: 8px;
@@ -194,7 +201,8 @@
       transition: background 0.2s ease, border-color 0.2s ease, color 0.2s ease;
     }
 
-    .toggle-done:hover {
+    .toggle-done:hover,
+    .delete-book:hover {
       border-color: var(--accent);
       color: var(--accent);
       background: rgba(45, 106, 90, 0.08);
@@ -202,6 +210,23 @@
 
     .book-item.done .toggle-done {
       color: var(--ink-muted);
+    }
+
+    #undo-delete {
+      margin: 0.75rem 0 0;
+      padding: 0.4rem 0.75rem;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: var(--surface);
+      color: var(--ink);
+      font: inherit;
+      font-size: 0.85rem;
+      cursor: pointer;
+    }
+
+    #undo-delete:hover {
+      border-color: var(--accent);
+      color: var(--accent);
     }
 
     footer {
@@ -281,6 +306,7 @@
 
     <p id="empty-message">まだ本がありません</p>
     <ul id="book-list" hidden></ul>
+    <button type="button" id="undo-delete" hidden>元に戻す</button>
 
     <section id="how-to" class="help">
       <h2>使い方</h2>
@@ -288,6 +314,7 @@
         <li>読みたい本のタイトルを入力し、「追加」を押します（Enter でも追加できます）。</li>
         <li>読み終わったら「読了」を押します。打ち消し線と淡色で区別されます。</li>
         <li>間違えたときは「未読に戻す」で戻せます。一覧はブラウザに保存され、リロードしても残ります。</li>
+        <li>不要な本は「削除」で外せます。直後なら「元に戻す」で戻せます。</li>
       </ol>
     </section>
 
@@ -321,10 +348,14 @@
     /** @type {Book[]} */
     let books = loadBooks();
 
+    /** @type {{ index: number, book: Book } | null} */
+    let lastDeleted = null;
+
     const form = document.getElementById("add-form");
     const titleInput = document.getElementById("title-input");
     const bookList = document.getElementById("book-list");
     const emptyMessage = document.getElementById("empty-message");
+    const undoDeleteButton = document.getElementById("undo-delete");
 
     /**
      * @returns {Book[]}
@@ -391,8 +422,36 @@
       render();
     }
 
+    /**
+     * @param {string} id
+     */
+    function deleteBook(id) {
+      const index = books.findIndex((book) => book.id === id);
+      if (index === -1) return;
+
+      const book = books[index];
+      lastDeleted = {
+        index,
+        book: { id: book.id, title: book.title, done: book.done },
+      };
+      books = books.filter((item) => item.id !== id);
+      saveBooks(books);
+      render();
+    }
+
+    function undoDelete() {
+      if (lastDeleted == null) return;
+
+      const { index, book } = lastDeleted;
+      books = [...books.slice(0, index), book, ...books.slice(index)];
+      lastDeleted = null;
+      saveBooks(books);
+      render();
+    }
+
     function render() {
       bookList.replaceChildren();
+      undoDeleteButton.hidden = lastDeleted == null;
 
       if (books.length === 0) {
         emptyMessage.hidden = false;
@@ -412,13 +471,23 @@
         title.className = "book-title";
         title.textContent = book.title;
 
-        const button = document.createElement("button");
-        button.type = "button";
-        button.className = "toggle-done";
-        button.textContent = book.done ? "未読に戻す" : "読了";
-        button.addEventListener("click", () => toggleDone(book.id));
+        const actions = document.createElement("div");
+        actions.className = "book-actions";
 
-        li.append(title, button);
+        const toggleButton = document.createElement("button");
+        toggleButton.type = "button";
+        toggleButton.className = "toggle-done";
+        toggleButton.textContent = book.done ? "未読に戻す" : "読了";
+        toggleButton.addEventListener("click", () => toggleDone(book.id));
+
+        const deleteButton = document.createElement("button");
+        deleteButton.type = "button";
+        deleteButton.className = "delete-book";
+        deleteButton.textContent = "削除";
+        deleteButton.addEventListener("click", () => deleteBook(book.id));
+
+        actions.append(toggleButton, deleteButton);
+        li.append(title, actions);
         bookList.append(li);
       }
     }
@@ -429,6 +498,8 @@
       titleInput.value = "";
       titleInput.focus();
     });
+
+    undoDeleteButton.addEventListener("click", () => undoDelete());
 
     render();
   </script>
